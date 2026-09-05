@@ -200,6 +200,7 @@ config() {
     --enable-version3
     --enable-gpl
     --enable-libx264
+    --enable-libx265
     --enable-libopus
     --enable-libvorbis
     --enable-libvpx

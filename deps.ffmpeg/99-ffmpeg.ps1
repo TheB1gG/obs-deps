@@ -81,6 +81,7 @@ function Configure {
         '--enable-version3'
         '--enable-gpl'
         '--enable-libx264'
+        $(if ( $Target -eq 'x64' ) { '--enable-libx265' })
         '--enable-libopus'
         '--enable-libvorbis'
         '--enable-libvpx'
