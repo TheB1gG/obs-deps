@@ -83,12 +83,23 @@ function Fixup {
     }
 
     if ( $Shared ) {
-        # CMake with MSVC produces x265.lib in the lib directory already,
-        # but ensure it's named correctly for FFmpeg's pkg-config detection
-        if ( Test-Path "$($script:ConfigData.OutputPath)/lib/x265.lib" ) {
-            Log-Debug "Import library already correctly named: x265.lib"
-        } elseif ( Test-Path "$($script:ConfigData.OutputPath)/lib/libx265.lib" ) {
-            Rename-Item "$($script:ConfigData.OutputPath)/lib/libx265.lib" -NewName "x265.lib"
+        # CMake with MSVC produces the import library in the lib directory.
+        # Ensure both x265.lib and libx265.lib are present: x265.lib is what
+        # FFmpeg's pkg-config detection resolves to during the build, while
+        # libx265.lib makes x265 discoverable through CMake's normal dependency
+        # chain in the prebuilt package (matching the libx264.lib convention).
+        $LibDir = "$($script:ConfigData.OutputPath)/lib"
+
+        if ( Test-Path "$LibDir/x265.lib" ) {
+            if ( -not ( Test-Path "$LibDir/libx265.lib" ) ) {
+                Copy-Item "$LibDir/x265.lib" "$LibDir/libx265.lib"
+                Log-Debug "Created libx265.lib from x265.lib for CMake discovery"
+            }
+        } elseif ( Test-Path "$LibDir/libx265.lib" ) {
+            Copy-Item "$LibDir/libx265.lib" "$LibDir/x265.lib"
+            Log-Debug "Created x265.lib from libx265.lib for FFmpeg pkg-config detection"
+        } else {
+            Log-Warning "No x265 import library found in ${LibDir}"
         }
     }
 }
