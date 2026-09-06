@@ -2,14 +2,12 @@ autoload -Uz log_debug log_error log_info log_status log_output
 
 ## Dependency Information
 local name='aom'
-local version='3.13.1'
+local version='3.15.0'
 local url='https://aomedia.googlesource.com/aom.git'
-local hash='d772e334cc724105040382a977ebb10dfd393293'
+local hash='de4c1d1edc49723a78954d30a83690aa1937422f'
 local -a patches=(
   "windows ${0:a:h}/patches/aom/0001-force-threading-shim-usage.patch \
-  6fa9ca74001c5fa3a6521a2b4944be2a8b4350d31c0234aede9a7052a8f1890b"
-  "macos ${0:a:h}/patches/aom/0002-fix-cmake-nasm-detection.patch \
-  47d926731a31990b432f188e7e16628bd2ca334f5b71fe55241d7b845884a35d"
+  304a49709ed9894081d4eddbf5c7e904f15df7044b263e7450d381db655e0fc2"
 )
 
 ## Dependency Overrides
@@ -66,13 +64,13 @@ config() {
     -DENABLE_EXAMPLES=OFF
     -DENABLE_TESTDATA=OFF
     -DENABLE_TESTS=OFF
-    -DENABLE_TOOLS=OFF
+    -DENABLE_APPS=OFF
     -DENABLE_NASM=ON
   )
 
   case ${target} {
-    macos-*) args+=(-DCMAKE_TOOLCHAIN_FILE="build/cmake/toolchains/${target_config[cmake_arch]}-macos.cmake") ;;
-    windows-x*) args+=(-DCMAKE_TOOLCHAIN_FILE="build/cmake/toolchains/${target_config[cmake_arch]}-mingw-gcc.cmake")
+    macos-*) args+=(-DCMAKE_TOOLCHAIN_FILE="cmake/toolchains/${target_config[cmake_arch]}-macos.cmake") ;;
+    windows-x*) args+=(-DCMAKE_TOOLCHAIN_FILE="cmake/toolchains/${target_config[cmake_arch]}-mingw-gcc.cmake")
   }
 
   log_info "Config (%F{3}${target}%f)"
