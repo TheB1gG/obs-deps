@@ -1,0 +1,61 @@
+diff --git a/source/CMakeLists.txt b/source/CMakeLists.txt
+index cbda0ca..0de6201 100755
+--- a/source/CMakeLists.txt
++++ b/source/CMakeLists.txt
+@@ -1174,8 +1174,54 @@ if(ENABLE_SHARED)
+     if(TARGET x265-asm)
+         add_dependencies(x265-shared x265-asm)
+     endif()
+-    if(EXTRA_LIB)
+-        target_link_libraries(x265-shared ${EXTRA_LIB})
++    if(EXTRA_LIB_DIR10 OR EXTRA_LIB_DIR12)
++        # Resolve satellite static library paths and link with whole-archive
++        if(MSVC)
++            # For MSVC: copy satellite libs into build dir with unique names,
++            # then reference by basename to avoid VS generator path mangling.
++            if(EXTRA_LIB_DIR10)
++                get_filename_component(_abs_lib_10 "${EXTRA_LIB_DIR10}/Release/x265-static.lib" ABSOLUTE)
++                add_custom_command(TARGET x265-shared PRE_LINK
++                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_abs_lib_10}" "${CMAKE_CURRENT_BINARY_DIR}/x265-10bit.lib"
++                    COMMENT "Copying 10-bit satellite lib"
++                )
++                list(APPEND LINKER_OPTIONS "/WHOLEARCHIVE:x265-10bit.lib")
++            endif()
++            if(EXTRA_LIB_DIR12)
++                get_filename_component(_abs_lib_12 "${EXTRA_LIB_DIR12}/Release/x265-static.lib" ABSOLUTE)
++                add_custom_command(TARGET x265-shared PRE_LINK
++                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_abs_lib_12}" "${CMAKE_CURRENT_BINARY_DIR}/x265-12bit.lib"
++                    COMMENT "Copying 12-bit satellite lib"
++                )
++                list(APPEND LINKER_OPTIONS "/WHOLEARCHIVE:x265-12bit.lib")
++            endif()
++        else()
++            # Non-MSVC: use absolute paths directly (force_load / whole-archive handle them fine)
++            if(EXTRA_LIB_DIR10)
++                set(_satellite_lib_10 "${EXTRA_LIB_DIR10}/libx265.a")
++            endif()
++            if(EXTRA_LIB_DIR12)
++                set(_satellite_lib_12 "${EXTRA_LIB_DIR12}/libx265.a")
++            endif()
++
++            set(_satellite_libs "")
++            if(_satellite_lib_10)
++                list(APPEND _satellite_libs "${_satellite_lib_10}")
++            endif()
++            if(_satellite_lib_12)
++                list(APPEND _satellite_libs "${_satellite_lib_12}")
++            endif()
++
++            if(APPLE)
++                foreach(_extra_lib ${_satellite_libs})
++                    list(APPEND LINKER_OPTIONS "-Wl,-force_load,${_extra_lib}")
++                endforeach()
++            else()
++                list(APPEND LINKER_OPTIONS "-Wl,--whole-archive")
++                list(APPEND LINKER_OPTIONS ${_satellite_libs})
++                list(APPEND LINKER_OPTIONS "-Wl,--no-whole-archive")
++            endif()
++        endif()
+     endif()
+ 	 target_link_libraries(x265-shared ${PLATFORM_LIBS})
+     if(SVTHEVC_FOUND)
