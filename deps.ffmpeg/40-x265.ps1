@@ -212,11 +212,26 @@ function Fixup {
     }
 
     if ( $Shared ) {
-        # Ensure import library is named correctly for FFmpeg's pkg-config detection
-        if ( Test-Path "$($script:ConfigData.OutputPath)/lib/x265.lib" ) {
-            Log-Debug "Import library already correctly named: x265.lib"
-        } elseif ( Test-Path "$($script:ConfigData.OutputPath)/lib/libx265.lib" ) {
-            Rename-Item "$($script:ConfigData.OutputPath)/lib/libx265.lib" -NewName "x265.lib"
+        # CMake installs the MSVC import library as lib/libx265.lib (OUTPUT_NAME=libx265 on MSVC).
+        # Keep that canonical name so it matches the libx264.lib convention and is found by
+        # obs-studio's FindLibx265.cmake (find_library NAMES x265 libx265), while also providing
+        # an x265.lib alias for FFmpeg's pkg-config (-lx265) during its own build. The import
+        # library is produced by the same per-arch CMake build as the DLL, so its machine type
+        # always matches the DLL (no separate lib.exe /machine: regeneration needed).
+        $LibDir = "$($script:ConfigData.OutputPath)/lib"
+        $CanonicalImplib = "${LibDir}/libx265.lib"
+        $FFmpegImplib = "${LibDir}/x265.lib"
+
+        if ( Test-Path $CanonicalImplib ) {
+            if ( -not (Test-Path $FFmpegImplib) ) {
+                Copy-Item $CanonicalImplib $FFmpegImplib
+                Log-Debug "Created FFmpeg alias ${FFmpegImplib} from ${CanonicalImplib}"
+            }
+        } elseif ( Test-Path $FFmpegImplib ) {
+            Copy-Item $FFmpegImplib $CanonicalImplib
+            Log-Debug "Created canonical import library ${CanonicalImplib} from ${FFmpegImplib}"
+        } else {
+            Log-Warning "x265 import library not found in ${LibDir}; expected libx265.lib"
         }
     }
 }
