@@ -3,7 +3,7 @@ autoload -Uz log_debug log_error log_info log_status log_output
 ## Dependency Information
 local name='libvorbis'
 local version='1.3.7'
-local url='https://gitlab.xiph.org/xiph/vorbis.git'
+local url='https://github.com/xiph/vorbis.git'
 local hash=2eac96b03ff67953354cb0a649c08aa3a23267ef
 
 ## Build Steps
