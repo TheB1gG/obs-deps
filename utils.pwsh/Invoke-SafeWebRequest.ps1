@@ -60,6 +60,9 @@ function Invoke-SafeWebRequest {
             $CurlOptions = @(
                 '--fail'
                 '--location'
+                '--retry', '5'
+                '--retry-delay', '10'
+                '--retry-all-errors'
                 $(if ( $Env:CI -eq $null ) { '--progress-bar' })
                 '--output', "$OutFile"
             )
@@ -69,9 +72,18 @@ function Invoke-SafeWebRequest {
                 $CurlOptions += @('-C', '-')
             }
 
-            Invoke-External curl @CurlOptions @HeaderStrings $Uri
+            $MaxAttempts = 3
+            for ( $Attempt = 1; ; $Attempt++ ) {
+                Invoke-External curl @CurlOptions @HeaderStrings $Uri
 
-            $NewHash = Get-FileHash -Path $OutFile -Algorithm $Algorithm
+                $NewHash = Get-FileHash -Path $OutFile -Algorithm $Algorithm
+                if ( $NewHash.Hash -eq $HashData.Hash -or $Attempt -ge $MaxAttempts ) {
+                    break
+                }
+
+                Log-Warning "Hash of downloaded file ${Uri} is '$($NewHash.Hash)' - expected '$($HashData.Hash)'. Re-downloading (attempt ${Attempt}/${MaxAttempts})..."
+                Remove-Item -Path $OutFile -Force
+            }
         }
     } catch {
         throw "Error while downloading ${Uri}: ${PSItem}."

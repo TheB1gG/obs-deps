@@ -16,7 +16,7 @@ if (( ! ${+CI} )) {
     curl_opts+=(--show-error --silent)
 }
 
-curl_opts+=(--location -O ${@})
+curl_opts+=(--location -O --retry 5 --retry-delay 3 --retry-max-time 120 --retry-all-errors ${@})
 
 log_debug "Running curl with options: ${curl_opts}"
 curl ${curl_opts}

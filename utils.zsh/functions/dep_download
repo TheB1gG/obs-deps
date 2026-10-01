@@ -23,15 +23,24 @@ if [[ ! -r "${hash_file}" ]] {
 
 log_debug "Checking for available download from ${url}"
 
-[[ -e ${dep_file} ]] || fetch "${url}"
+local -i attempt max_attempts=3
+for (( attempt = 1; attempt <= max_attempts; attempt++ )) {
+  [[ -e ${dep_file} ]] || fetch "${url}"
 
-log_debug "Running 'sha256sum --check --status ${hash_file}'"
-sha256sum --check --status "${hash_file}" || error_code="$?"
+  log_debug "Running 'sha256sum --check --status ${hash_file}'"
+  sha256sum --check --status "${hash_file}" && error_code=0 || error_code="$?"
 
-if (( error_code == 0 )) {
-  log_status "Hash of downloaded file ${dep_file} confirmed."
-} else {
-  log_error "Hash of downloaded file ${dep_file} failed."
+  if (( error_code == 0 )) {
+    log_status "Hash of downloaded file ${dep_file} confirmed."
+    break
+  }
+
+  log_error "Hash of downloaded file ${dep_file} failed (attempt ${attempt}/${max_attempts})."
+  rm -f "${dep_file}"
+}
+
+if (( error_code != 0 )) {
+  log_error "Download of ${dep_file} from ${url} failed after ${max_attempts} attempts."
 }
 
 return ${error_code}
