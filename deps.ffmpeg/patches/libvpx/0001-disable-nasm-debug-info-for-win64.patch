@@ -1,0 +1,25 @@
+diff --git a/build/make/configure.sh b/build/make/configure.sh
+index 93643f3..fb09e65 100644
+--- a/build/make/configure.sh
++++ b/build/make/configure.sh
+@@ -1469,7 +1469,6 @@ EOF
+           ;;
+         win64)
+           add_asflags -f win64
+-          enabled debug && add_asflags -g cv8
+           EXE_SFX=.exe
+           ;;
+         linux*|solaris*|android*)
+diff --git a/build/make/gen_msvs_vcxproj.sh b/build/make/gen_msvs_vcxproj.sh
+index 1e1db05..005384f 100644
+--- a/build/make/gen_msvs_vcxproj.sh
++++ b/build/make/gen_msvs_vcxproj.sh
+@@ -259,7 +259,7 @@ libs=${libs// /;}
+ case "$target" in
+     x86_64*)
+         platforms[0]="x64"
+-        asm_Debug_cmdline="${as} -Xvc -gcv8 -f win64 ${yasmincs} &quot;%(FullPath)&quot;"
++        asm_Debug_cmdline="${as} -Xvc -f win64 ${yasmincs} &quot;%(FullPath)&quot;"
+         asm_Release_cmdline="${as} -Xvc -f win64 ${yasmincs} &quot;%(FullPath)&quot;"
+     ;;
+     x86*)
