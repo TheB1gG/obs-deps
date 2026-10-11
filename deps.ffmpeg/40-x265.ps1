@@ -96,11 +96,12 @@ function Patch {
     }
 
     # Apply live-RC-reconfig patch inline (avoids line-ending issues with patch files on Windows)
-    # Encoder::configure() is called by x265_reconfig with the "latest param" block. The original
-    # "this->m_param = p;" swaps m_param to that block, orphaning the open-time block that RateControl
-    # holds a pointer to - mid-stream RC reconfigs never reach the rate control, and the frame-boundary
-    # sync x265_copy_params(m_param, m_latestParam) degenerates into a self-copy. Copy into the stable
-    # block instead so rc.* changes take effect at the next frame boundary.
+    # Encoder::configure() is called twice: at open (api.cpp, m_param still NULL - the original
+    # "this->m_param = p;" first assigns it) and from x265_encoder_reconfig with the "latest param"
+    # block (m_latestParam). On reconfig, swapping m_param to that block orphans the open-time block
+    # that RateControl holds a pointer to - mid-stream RC reconfigs never reach the rate control, and
+    # the frame-boundary sync x265_copy_params(m_param, m_latestParam) degenerates into a self-copy.
+    # Copy into the stable block instead so rc.* changes take effect at the next frame boundary.
     $EncoderFile = "source/encoder/encoder.cpp"
     $content = Get-Content $EncoderFile -Raw
 
@@ -116,13 +117,17 @@ void Encoder::configure(x265_param *p)
 {
     /* Keep m_param pointing at the original param block for the lifetime of the encoder:
      * RateControl captured a pointer to that block at open time ("new RateControl(*m_param, this)")
-     * and reads rc.* from it on every frame. Swapping m_param to p - the reconfig block passed in by
-     * x265_reconfig - would orphan that copy: mid-stream rate-control reconfigs would land in p while
-     * the rate control kept reading stale values forever, and the frame-boundary sync
-     * x265_copy_params(m_param, m_latestParam) would degenerate into a self-copy. Copy the new values
-     * into the stable block instead and keep using that same block below. */
-    if (m_param != p)
-        x265_copy_params(m_param, p);
+     * and reads rc.* from it on every frame; reconfigureRC() rebuilds its VBV state from
+     * m_param->rc.vbv* when an RC reconfig lands. The original code swapped m_param to p - the
+     * reconfig block passed in by x265_encoder_reconfig (m_latestParam) - orphaning that copy:
+     * mid-stream rate-control reconfigs landed in m_latestParam while rate control kept reading
+     * stale values from the open-time block forever, and the frame-boundary sync
+     * x265_copy_params(m_param, m_latestParam) degenerated into a self-copy. Copy the new values
+     * into the stable block instead so both views stay consistent. */
+    if (!m_param)
+        this->m_param = p;            /* first call (open): adopt the passed-in block */
+    else if (m_param != p)
+        x265_copy_params(m_param, p); /* reconfig: fold new values into the stable block */
     p = m_param;
     if (p->bAnalysisType == AVC_INFO)
 '@

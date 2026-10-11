@@ -2,20 +2,24 @@ diff --git a/source/encoder/encoder.cpp b/source/encoder/encoder.cpp
 index 26b909c..bbf96d5 100644
 --- a/source/encoder/encoder.cpp
 +++ b/source/encoder/encoder.cpp
-@@ -3970,7 +3970,16 @@ void Encoder::configureVideoSignalTypePreset(x265_param* p)
+@@ -3970,7 +3970,20 @@ void Encoder::configureVideoSignalTypePreset(x265_param* p)
  
  void Encoder::configure(x265_param *p)
  {
 -    this->m_param = p;
 +    /* Keep m_param pointing at the original param block for the lifetime of the encoder:
 +     * RateControl captured a pointer to that block at open time ("new RateControl(*m_param, this)")
-+     * and reads rc.* from it on every frame. Swapping m_param to p - the reconfig block passed in by
-+     * x265_reconfig - would orphan that copy: mid-stream rate-control reconfigs would land in p while
-+     * the rate control kept reading stale values forever, and the frame-boundary sync
-+     * x265_copy_params(m_param, m_latestParam) would degenerate into a self-copy. Copy the new values
-+     * into the stable block instead and keep using that same block below. */
-+    if (m_param != p)
-+        x265_copy_params(m_param, p);
++     * and reads rc.* from it on every frame; reconfigureRC() rebuilds its VBV state from
++     * m_param->rc.vbv* when an RC reconfig lands. The original code swapped m_param to p - the
++     * reconfig block passed in by x265_encoder_reconfig (m_latestParam) - orphaning that copy:
++     * mid-stream rate-control reconfigs landed in m_latestParam while rate control kept reading
++     * stale values from the open-time block forever, and the frame-boundary sync
++     * x265_copy_params(m_param, m_latestParam) degenerated into a self-copy. Copy the new values
++     * into the stable block instead so both views stay consistent. */
++    if (!m_param)
++        this->m_param = p;            /* first call (open): adopt the passed-in block */
++    else if (m_param != p)
++        x265_copy_params(m_param, p); /* reconfig: fold new values into the stable block */
 +    p = m_param;
      if (p->bAnalysisType == AVC_INFO)
          this->m_externalFlush = true;

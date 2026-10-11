@@ -17,9 +17,9 @@ local -a patches=(
   "macos ${0:a:h}/patches/x265-whole-archive.patch 0eb988dd4c8683e9c5d9f22149a002c403fe142d31acb0572670645bfd8ecc9b"
   "linux ${0:a:h}/patches/x265-whole-archive.patch 0eb988dd4c8683e9c5d9f22149a002c403fe142d31acb0572670645bfd8ecc9b"
   "windows ${0:a:h}/patches/x265-whole-archive.patch 0eb988dd4c8683e9c5d9f22149a002c403fe142d31acb0572670645bfd8ecc9b"
-  "macos ${0:a:h}/patches/x265-live-rc-reconfig.patch aee67cf39169902326d1c701a46b9d8997e1a42cebefbca120bb31ad2ce5b538"
-  "linux ${0:a:h}/patches/x265-live-rc-reconfig.patch aee67cf39169902326d1c701a46b9d8997e1a42cebefbca120bb31ad2ce5b538"
-  "windows ${0:a:h}/patches/x265-live-rc-reconfig.patch aee67cf39169902326d1c701a46b9d8997e1a42cebefbca120bb31ad2ce5b538"
+  "macos ${0:a:h}/patches/x265-live-rc-reconfig.patch 861a3ed66c8a7378de6aa48a1f42f9f1c39447d8fba8061d4f27aa7daf26d161"
+  "linux ${0:a:h}/patches/x265-live-rc-reconfig.patch 861a3ed66c8a7378de6aa48a1f42f9f1c39447d8fba8061d4f27aa7daf26d161"
+  "windows ${0:a:h}/patches/x265-live-rc-reconfig.patch 861a3ed66c8a7378de6aa48a1f42f9f1c39447d8fba8061d4f27aa7daf26d161"
 )
 
 ## Dependency Overrides
