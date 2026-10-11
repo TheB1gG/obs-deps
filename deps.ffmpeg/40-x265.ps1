@@ -94,6 +94,56 @@ function Patch {
             Log-Warning "Could not find pattern to patch in CMakeLists.txt - skipping"
         }
     }
+
+    # Apply live-RC-reconfig patch inline (avoids line-ending issues with patch files on Windows)
+    # Encoder::configure() is called by x265_reconfig with the "latest param" block. The original
+    # "this->m_param = p;" swaps m_param to that block, orphaning the open-time block that RateControl
+    # holds a pointer to - mid-stream RC reconfigs never reach the rate control, and the frame-boundary
+    # sync x265_copy_params(m_param, m_latestParam) degenerates into a self-copy. Copy into the stable
+    # block instead so rc.* changes take effect at the next frame boundary.
+    $EncoderFile = "source/encoder/encoder.cpp"
+    $content = Get-Content $EncoderFile -Raw
+
+    $oldText = @'
+void Encoder::configure(x265_param *p)
+{
+    this->m_param = p;
+    if (p->bAnalysisType == AVC_INFO)
+'@
+
+    $newText = @'
+void Encoder::configure(x265_param *p)
+{
+    /* Keep m_param pointing at the original param block for the lifetime of the encoder:
+     * RateControl captured a pointer to that block at open time ("new RateControl(*m_param, this)")
+     * and reads rc.* from it on every frame. Swapping m_param to p - the reconfig block passed in by
+     * x265_reconfig - would orphan that copy: mid-stream rate-control reconfigs would land in p while
+     * the rate control kept reading stale values forever, and the frame-boundary sync
+     * x265_copy_params(m_param, m_latestParam) would degenerate into a self-copy. Copy the new values
+     * into the stable block instead and keep using that same block below. */
+    if (m_param != p)
+        x265_copy_params(m_param, p);
+    p = m_param;
+    if (p->bAnalysisType == AVC_INFO)
+'@
+
+    if ($content -match [regex]::Escape($oldText)) {
+        $content = $content.Replace($oldText, $newText)
+        Set-Content -Path $EncoderFile -Value $content -NoNewline
+        Log-Information "Applied live-RC-reconfig patch to encoder.cpp"
+    } else {
+        # Try with normalized line endings
+        $oldNorm = $oldText -replace "`r`n", "`n"
+        $newNorm = $newText -replace "`r`n", "`n"
+        $contentNorm = $content -replace "`r`n", "`n"
+        if ($contentNorm -match [regex]::Escape($oldNorm)) {
+            $contentNorm = $contentNorm.Replace($oldNorm, $newNorm)
+            Set-Content -Path $EncoderFile -Value $contentNorm -NoNewline
+            Log-Information "Applied live-RC-reconfig patch to encoder.cpp (normalized)"
+        } else {
+            Log-Warning "Could not find pattern to patch in encoder.cpp - skipping"
+        }
+    }
 }
 
 function Clean {
